@@ -1,106 +1,70 @@
 (ns mars-rover-photos.core
-  (:require [clojure.java.io :as io]
-            [clojure.data.json :as json]
-            [clojure.string :as string]
-            [gifclj.core :as gif])
-  (:import [java.net URL])
+  (:require [mars-rover-photos.rover :as rover]
+            [mars-rover-photos.gif :as gif]
+            [mars-rover-photos.storage :as storage]
+            [mars-rover-photos.view :as view]
+            [compojure.core :refer [defroutes GET PUT POST DELETE ANY]]
+            [compojure.handler :refer [site]]
+            [compojure.route :as route]
+            [clojure.java.io :as io]
+            [ring.adapter.jetty :as jetty])
   (:gen-class))
 
-(def API_DEMO_KEY "DEMO_KEY")
-(def storage "images/")
+(defn fetch-gif
+  [rover camera sol]
+  (let [gif-filename (str (quot (System/currentTimeMillis) 1000) ".gif")
+        gif-path (str "public/" gif-filename)]
 
-(def cameras
-  [{:abbrev "FHAZ" :name "Front Hazard Avoidance Camera" :rovers [:curiousity :opportunity :spirit]}
-   {:abbrev "RHAZ" :name "Rear Hazard Avoidance Camera" :rovers [:curiousity :opportunity :spirit]}
-   {:abbrev "MAST" :name "Mast Camera" :rovers [:curiousity]}
-   {:abbrev "CHEMCAM" :name "Chemistry and Camera Complex" :rovers [:curiousity]}
-   {:abbrev "MAHLI" :name "Mars Hand Lens Imager" :rovers [:curiousity]}
-   {:abbrev "MARDI"	:name "Mars Descent Image" :rovers [:curiousity]}
-   {:abbrev "NAVCAM" :name "Navigation Camera" :rovers [:curiousity :opportunity :spirit]}
-   {:abbrev "PANCAM" :name"Panoramic Camera" :rovers [:opportunity :spirit]}
-   {:abbrev "MINITES" :name "Miniature Thermal Emission Spectrometer (Mini-TES)" :rovers [:opportunity :spirit]}])
+    (rover/download-images (keyword rover) (keyword camera) {:sol (Integer. sol)} storage/path)
+    (gif/generate gif-path (storage/list-images))
 
-(defn api-url
-  "Returns the images endpoint of NASA's rover API."
-  [rover camera {:keys [sol date]} api-key]
-  (URL. (str "https://api.nasa.gov/mars-photos/api/v1/rovers/" (name rover) "/photos?"
-             "camera=" (name camera)
-             (or (and sol (str "&sol=" sol))
-                 (and date (str "&earth_date=" date)))
-             "&api_key=" api-key)))
+    {:status 200
+     :headers {"Content-Type" "text/html"}
+     :body (str "<img src='/" gif-path "' />") }
+    ))
 
-(defn photos
-  "Extracts 'photos' key from resp."
-  [resp]
-  (get resp "photos"))
+(defroutes app
+  (GET "/" []
+       (view/index (rover/get-info))
+       ;(view/index (reduce (fn [rs r] (conj rs (rover/get-info r)) ) [] rover/rovers))
+       )
 
-(defn img-src
-  "Extracts 'img_src' key from photo."
-  [photo]
-  (get photo "img_src"))
+  (GET "/gif" { {:keys [rover camera sol]} :params} (str rover camera sol)
+       (fetch-gif rover camera sol)
+       )
 
-(defn get-photos
-  "Returns a list of photo URIs taken by rover with camera on day."
-  [rover camera day]
-  (->
-   (api-url rover camera day API_DEMO_KEY)
-   io/reader
-   json/read
-   photos))
-
-(defn img-name
-  "Returns image name from url."
-  [url]
-  (last (string/split url  #"/")))
-
-(defn download-image
-  "Downloads image at src to to."
-  [to src]
-  (let [file (io/file (str to (img-name src)))]
-    (with-open [from (io/input-stream src)]
-      (io/copy from file))))
+  (route/files "/public/")
+  (route/not-found "Page not found")
+  )
 
 
-(defn download-rover-images
-  "Downloads rover's images for day and camera."
-  [rover camera day to]
-  (try
-    (->>
-     (get-photos rover camera day)
-     (map img-src)
-     (map (partial download-image to)))
-     (catch java.io.IOException _)))
+(def application (site #'app))
 
-(defn jpg?
-  "Returns true if image ends in wither .JPG or .jpg, false otherwise."
-  [image]
-  (or (.endsWith image ".JPG")
-      (.endsWith image ".jpg")))
+(defn start
+  [port]
+  (jetty/run-jetty application {:port port
+                                :join? false}))
 
-(defn make-gif
-  "Generates an animated gif image from images and saves it under name."
-  [name images & {:keys [delay loops lastdelay]
-                  :or {delay 50 loops 0 lastdelay 50}}]
-  (gif/write-gif name
-                 (gif/imgs-from-files images)
-                 :delay delay
-                 :loops loops
-                 :lastdelay lastdelay))
+(defn -main [& [port]]
+  (let [port (Integer. (or port 5000))]
+    (start port)))
 
-(defn list-images
-  "Returns a list of images (jpg default) found at source."
-  ([source] (list-images jpg? source))
-  ([f source]
-   (filter f (seq (.list (clojure.java.io/file source))))))
+;; For interactive development:
+(comment
+  (def server (-main))
+  (.stop server)
+  (.start server)
 
-(defn prefix-storage
-  "Prefixes each item in strings with storage."
-  [strings]
-  (map (partial str storage) strings))
+  (rover/download-images :curiosity :any {:sol 1000} "images/")
 
-
+  (fetch-gif "curiosity" "any" 1000)
+  )
 
 (comment
+
+  (rover/download-images :curiosity :any {:sol 1000} img-storage)
+  (gif/generate "test.gif" (storage/list-images))
+
 
   ;; test
   (doall
@@ -113,4 +77,4 @@
   "run gif-name rover camera 100-150"
 
   ;;(api/get-photos :curiosity :mast :date "2015-6-3")
-)
+  )

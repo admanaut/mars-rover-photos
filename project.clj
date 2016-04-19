@@ -6,5 +6,7 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/data.json "0.2.6"]
                  [gif-clj "1.0.3"]
-                 [org.clojure/tools.cli "0.2.4"]]
-  :main mars-rover-photos.core)
+                 [compojure "1.5.0"]
+                 [ring/ring-core "1.4.0"]
+                 [ring/ring-jetty-adapter "1.4.0"]
+                 [hiccup "1.0.5"]])
