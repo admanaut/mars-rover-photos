@@ -46,7 +46,7 @@
                                 :join? false}))
 
 (defn -main [& [port]]
-  (let [port (Integer. (or port 5000))]
+  (let [port (Integer. (or port 80))]
     (start port)))
 
 ;; For interactive development:
