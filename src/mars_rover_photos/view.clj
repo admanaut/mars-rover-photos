@@ -61,3 +61,11 @@
         (rover-panel r)])]
     [:div {:class "embed-responsive embed-responsive-16by9"}
      [:iframe {:name "gif-iframe" :class "embed-responsive-item"}]]]))
+
+
+(defn rover-gif
+  [src rover camera sol]
+  (h/html5
+   [:body
+    [:span {:style "display: block"} (str "Images taken by " rover " with " camera " camera on sol " sol)]
+    [:img {:src src }]]))
