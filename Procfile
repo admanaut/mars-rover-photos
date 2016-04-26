@@ -1,1 +1,1 @@
-web: java $JVM_OPTS -jar target/mars-rover-photos.jar --port $PORT
+web: java $JVM_OPTS -jar target/mars-rover-photos.jar
