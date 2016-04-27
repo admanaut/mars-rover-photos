@@ -24,9 +24,9 @@
 (defn- generate-gif
   [rover camera sol]
   (let [images-src (rover/get-images (keyword rover) (keyword camera) {:sol (Integer. sol)})
-        files (storage/download-images images-src imgs-path)
-        gif-src (gif/generate pub-res files)]
-    (if (and images-src files gif-src)
+        images (storage/download-images images-src imgs-path)
+        gif-src (gif/generate pub-res images)]
+    (if (and images-src images gif-src)
       (gif-response (view/rover-gif gif-src rover camera sol) 200)
       (gif-response "No images found for these parameter" 404))))
 

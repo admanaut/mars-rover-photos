@@ -26,14 +26,25 @@
   [target img-name]
   (str (add-slash target) img-name))
 
+(defn- image-exists?
+  [img]
+  (.exists (io/as-file img)))
+
+(defn- src->path
+  [path src]
+  (prepend-target path (img-name src)))
+
 (defn download-images
-  "Downloads images to target.
+  "Downloads images to target. First it filters out all images already downloaded.
+  Returns a list of images succcesfully downloaded.
 
   imgs-src - [collection] a collection of img srcs
-  target - [string] path to a folder where images will be downloaded to
+  target   - [string] path to a folder where images will be downloaded to
   "
   [imgs-src target]
-  (map download-image
-       imgs-src
-       (map #(prepend-target target (img-name %))
-            imgs-src)))
+  (let [src-target-path #(src->path target %)
+        [existing to-download] ((juxt filter remove) #(-> % src-target-path image-exists?) imgs-src)
+        downloaded (map #(download-image %1 %2)
+                        to-download
+                        (map src-target-path to-download))]
+    (into downloaded (map src-target-path existing))))
