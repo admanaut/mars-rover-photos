@@ -48,7 +48,6 @@
       )]])
 
 (defn index
-  "TODO: fix me"
   [rovers]
   (h/html5
    [:head
@@ -66,6 +65,14 @@
 (defn rover-gif
   [src rover camera sol]
   (h/html5
+   [:head
+    (h/include-css "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css")]
    [:body
-    [:span {:style "display: block"} (str "Images taken by " rover " with " camera " camera on sol " sol)]
-    [:img {:src src }]]))
+    [:div {:class "row"}
+     [:div {:class "col-md-2"}]
+     [:div {:class "col-md-8"}
+      [:div {:class "well well-sm"}
+       [:span {:style "display: block"} (str "Images taken by " rover " with " camera " on sol " sol)]]
+      [:img {:src src }]]
+     [:div {:class "col-md-2"}]
+     ]]))

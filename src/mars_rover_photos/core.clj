@@ -21,14 +21,20 @@
    :headers {"Content-Type" "text/html"}
    :body body})
 
+(defn- res-exists?
+  [name]
+  (.exists (io/as-file name)))
+
 (defn- generate-gif
   [rover camera sol]
   (let [images-src (rover/get-images (keyword rover) (keyword camera) {:sol (Integer. sol)})
-        images (storage/download-images images-src imgs-path)
-        gif-src (gif/generate pub-res images)]
-    (if (and images-src images gif-src)
-      (gif-response (view/rover-gif gif-src rover camera sol) 200)
-      (gif-response "No images found for these parameter" 404))))
+        images (storage/download-images images-src imgs-path)]
+    (if-not (empty? images)
+      (let [gif-src (str pub-res (hash images) ".gif")]
+        (cond (res-exists? gif-src) (gif-response (view/rover-gif gif-src rover camera sol) 200)
+              (gif/generate gif-src images)  (gif-response (view/rover-gif gif-src rover camera sol) 200)
+              :else (gif-response "There was a problem generating the gif.." 404)))
+      (gif-response "No images found for these parameters" 404))))
 
 (defn- rovers-info []
   (reduce (fn [rs r] (conj rs (rover/get-info r)) )
@@ -52,7 +58,6 @@
   [port]
   (jetty/run-jetty application {:port port
                                 :join? false}))
-
 
 (defn -main []
   (let [port (Integer/parseInt (get (System/getenv) "PORT" "8080"))]
