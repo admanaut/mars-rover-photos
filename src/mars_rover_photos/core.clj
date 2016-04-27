@@ -21,20 +21,35 @@
    :headers {"Content-Type" "text/html"}
    :body body})
 
+(defn- bad-request
+  [msg]
+  {:status 400
+   :body msg})
+
+(defn- )
+
 (defn- res-exists?
   [name]
   (.exists (io/as-file name)))
 
+(defn- validate-params
+  [rover camera sol]
+  (and  (get rover/rovers (keyword rover) false)
+        (filter #(= (:abbrev %) (keyword camera)) rover/cameras)
+        (re-matches #"[0-9]+-?[0-9]+?" sol)))
+
 (defn- generate-gif
   [rover camera sol]
-  (let [images-src (rover/get-images (keyword rover) (keyword camera) {:sol (Integer. sol)})
-        images (storage/download-images images-src imgs-path)]
-    (if-not (empty? images)
-      (let [gif-src (str pub-res (hash images) ".gif")]
-        (cond (res-exists? gif-src) (gif-response (view/rover-gif gif-src rover camera sol) 200)
-              (gif/generate gif-src images)  (gif-response (view/rover-gif gif-src rover camera sol) 200)
-              :else (gif-response "There was a problem generating the gif.." 404)))
-      (gif-response "No images found for these parameters" 404))))
+  (if (validate-params rover camera sol)
+    (let [images-src (rover/get-images (keyword rover) (keyword camera) {:sol (Integer. sol)})
+          images (storage/download-images images-src imgs-path)]
+      (if-not (empty? images)
+        (let [gif-src (str pub-res (hash images) ".gif")]
+          (cond (res-exists? gif-src) (gif-response (view/rover-gif gif-src rover camera sol) 200)
+                (gif/generate gif-src images)  (gif-response (view/rover-gif gif-src rover camera sol) 200)
+                :else (gif-response "There was a problem generating the gif.." 404)))
+        (gif-response "No images found for these parameters" 404)))
+    (bad-request "invalid params")))
 
 (defn- rovers-info []
   (reduce (fn [rs r] (conj rs (rover/get-info r)) )

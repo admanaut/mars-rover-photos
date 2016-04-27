@@ -5,7 +5,9 @@
 
 (def API_DEMO_KEY "DEMO_KEY")
 
-(def rovers [:curiosity :opportunity :spirit])
+(def rovers {:curiosity "Curiosity"
+             :opportunity "Opportunity"
+             :spirit "Spirit"})
 
 (def cameras
   [{:abbrev :fhaz :name "Front Hazard Avoidance Camera" :rovers [:curiousity :opportunity :spirit]}
