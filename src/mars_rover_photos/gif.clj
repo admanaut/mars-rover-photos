@@ -5,7 +5,7 @@
 (defn generate
   "Generates an animated gif image from images and saves it under name."
   [gif-name images & {:keys [delay loops lastdelay]
-                      :or {delay 50 loops 0 lastdelay 50}}]
+                      :or {delay 100 loops 0 lastdelay 100}}]
   (gif/write-gif gif-name
                  (gif/imgs-from-files images)
                  :delay delay

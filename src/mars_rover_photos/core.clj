@@ -26,17 +26,15 @@
   {:status 400
    :body msg})
 
-(defn- )
-
 (defn- res-exists?
   [name]
   (.exists (io/as-file name)))
 
 (defn- validate-params
   [rover camera sol]
-  (and  (get rover/rovers (keyword rover) false)
-        (filter #(= (:abbrev %) (keyword camera)) rover/cameras)
-        (re-matches #"[0-9]+-?[0-9]+?" sol)))
+  (and (filter #(= (keyword rover) %) rover/rovers)
+       (filter #(= (:abbrev %) (keyword camera)) rover/cameras)
+       (re-matches #"[0-9]+-?[0-9]+?" sol)))
 
 (defn- generate-gif
   [rover camera sol]
@@ -55,7 +53,6 @@
   (reduce (fn [rs r] (conj rs (rover/get-info r)) )
           []
           rover/rovers))
-
 
 (defroutes app
   (GET "/" [] (view/index (rovers-info)))
