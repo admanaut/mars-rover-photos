@@ -19,7 +19,7 @@ to create a standalone jar file, then run:
 ```
 java $JVM_OPTS -jar target/mars-rover-photos.jar
 ```
-and visit http://localhost:8080/ in you browser.
+and open http://localhost:8080/ in you browser.
 
 *PORT*
 
@@ -32,6 +32,7 @@ there is also an instance running on Heroku https://hidden-chamber-11175.herokua
 ## NASA references
 
 *API*
+
 the API is available for free but a developer key has to be obtained first.
 
 check out the docs here https://api.nasa.gov/api.html#MarsPhotos
