@@ -41,7 +41,6 @@
     (let [[_ sol-from sol-to] (re-find #"([0-9]*)-?([0-9]*)?" sol)
           images-src (rv/get-images (keyword rover) (keyword camera) {:sol [(->int sol-from) (->int sol-to)]})
           images (st/download-images images-src imgs-path)]
-      (println sol-from sol-to)
       (if (seq images)
         (let [gif-src (str pub-res (hash (sort images)) ".gif")]
           (if (or (res-exists? gif-src) (gif/generate gif-src images))
