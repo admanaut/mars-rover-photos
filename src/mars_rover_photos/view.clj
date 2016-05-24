@@ -41,7 +41,7 @@
        [:input {:type "hidden" :name "rover" :value (string/lower-case (get r "name"))}]
        (rover-cameras cams)
        [:div {:class "input-group"}
-        [:input {:type "text" :class "form-control" :placeholder "Enter sol" :name "sol"}]
+        [:input {:type "text" :class "form-control" :placeholder "Enter sol i.e. 100 or 100-200" :name "sol"}]
         [:span {:class "input-group-btn"}
          [:button {:type "submit" :class"btn btn-primary" } "GO!"]]
         ]]

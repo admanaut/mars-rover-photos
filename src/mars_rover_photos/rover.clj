@@ -1,7 +1,10 @@
 (ns mars-rover-photos.rover
-  (:require [clojure.java.io :as io]
-            [clojure.data.json :as json])
-  (:import [java.net URL]))
+  (:require
+   [mars-rover-photos.util :as ut]
+   [clojure.java.io :as io]
+   [clojure.data.json :as json])
+  (:import
+   [java.net URL]))
 
 (def API_DEMO_KEY "DEMO_KEY")
 
@@ -21,13 +24,7 @@
 (def api-base-url "https://api.nasa.gov/mars-photos/api/v1/rovers/")
 
 (defn photos-api-url
-  "Builds the API endpoint for retrieving rover photos.
-
-  rover   - [keyword] one of defined rovers
-  camera  - [keyword] either one of defined cameras or :all
-  day     - [map] with either :date or :sol
-  api-key - [string] NASA's rover API key
-  "
+  "Builds the API endpoint for retrieving rover photos."
   [rover camera {:keys [sol date]} api-key]
   (URL. (str api-base-url (name rover) "/photos?"
              (when-not (= camera :all) (str "camera=" (name camera)) )
@@ -36,82 +33,60 @@
              "&api_key=" api-key)))
 
 (defn rovers-api-url
-  "Builds the API endpoint for retrieving rover info.
+  "Builds the API endpoint for retrieving rover info."
+  [base-url rover api-key]
+  (URL. (str base-url (name rover) "?api_key=" api-key)))
 
-  rover   - [keyword] one of defined rovers
-  api-key - [string] NASA's rover API key
-  "
-  [rover api-key]
-  (URL. (str api-base-url (name rover) "?api_key=DEMO_KEY")))
+(defn mkey
+  [k]
+  (fn [m] (get m k)))
 
-(defn photos
-  "Extracts 'photos' key from m.
+(def img-src (mkey "img_src"))
+(def krover (mkey "rover"))
+(def photos (mkey "photos"))
+(def imgs-src #(map img-src %))
 
-  m - [map]
-  "
-  [m]
-  (get m "photos"))
+(def json-io (ut/io (comp json/read io/reader)))
 
-(defn img-src
-  "Extracts 'img_src' key from m.
-
-  m - [map]
-  "
-  [m]
-  (get m "img_src"))
-
-(defn rover
-  "Extracts 'rover' key from m.
-
-  m - [map]
-  "
-  [m]
-  (get m "rover"))
-
-(defn- get-json
-  [url]
-  (try
-    (-> url
-        io/reader
-        json/read)
-    (catch java.io.IOException _ nil)))
-
-(defn- photos-src
-  [photos]
-  (when-not (nil? photos)
-    (map img-src photos)))
+(defn- get-sol-images
+  [^String url]
+  (->> url
+       (ut/perform-io json-io)
+       ut/try*
+       photos
+       imgs-src))
 
 (defn get-images
-  "Returns a list of photo URIs taken by rover with camera on day.
+  "Returns a list of image URIs taken by rover with camera on day."
+  ([rover camera day]
+   (get-images rover camera day API_DEMO_KEY))
+  ([rover camera {:keys [sol date] :as day} api-key]
+   (let [[sol-from sol-to] sol]
+     (if (and sol-from sol-to (<= sol-from sol-to))
+       (loop [s (range sol-from sol-to)
+              r []]
+         (if (seq s)
+           (recur (rest s) (into r (get-sol-images (photos-api-url rover camera {:sol (first s)} api-key))))
+           r))
 
-  rover   - [keyword] one of defined rovers
-  camera  - [keyword] either one of defined cameras or :all
-  day     - [map] with either :date or :sol
-  api-key - [string &optional] NASA's rover API key, default to DEMO_KEY
-  "
-  ([rover camera day] (get-images rover camera day API_DEMO_KEY))
-  ([rover camera day api-key]
-   (->> (photos-api-url rover camera day api-key)
-        get-json
-        photos
-        photos-src
-       )))
+       (get-sol-images (photos-api-url rover camera {:sol sol-from} api-key))))))
 
 (defn get-info
-  "Returns a map of information about rover, like landing_date max_sol etc.
+  "Returns a map of rover details, like landing_date, max_sol etc."
+  ([rover]
+   (get-info rover API_DEMO_KEY))
+  ([rover api-key]
+   (->> (rovers-api-url api-base-url rover api-key)
+        (ut/perform-io json-io)
+        ut/try*
+        krover)))
 
-  rover   - [keyword] one of defined rovers
-  api-key - [string &optional] NASA's rover API key, default to DEMO_KEY
-  "
-  ([r] (get-info r API_DEMO_KEY))
-  ([r api-key]
-   (-> (rovers-api-url r api-key)
-       io/reader
-       json/read
-       rover)))
 
-(comment
-  (defn get-info
-    []
-    [{"id" 5, "name" "Curiosity", "landing_date" "2012-08-06", "max_sol" 1315, "max_date" "2016-04-18", "total_photos" 250165, "cameras" [{"name" "FHAZ", "full_name" "Front Hazard Avoidance Camera"} {"name" "NAVCAM", "full_name" "Navigation Camera"} {"name" "MAST", "full_name" "Mast Camera"} {"name" "CHEMCAM", "full_name" "Chemistry and Camera Complex"} {"name" "MAHLI", "full_name" "Mars Hand Lens Imager"} {"name" "MARDI", "full_name" "Mars Descent Imager"} {"name" "RHAZ", "full_name" "Rear Hazard Avoidance Camera"}]} {"id" 6, "name" "Opportunity", "landing_date" "2004-01-25", "max_sol" 4348, "max_date" "2016-04-18", "total_photos" 179636, "cameras" [{"name" "FHAZ", "full_name" "Front Hazard Avoidance Camera"} {"name" "NAVCAM", "full_name" "Navigation Camera"} {"name" "PANCAM", "full_name" "Panoramic Camera"} {"name" "MINITES", "full_name" "Miniature Thermal Emission Spectrometer (Mini-TES)"} {"name" "ENTRY", "full_name" "Entry, Descent, and Landing Camera"} {"name" "RHAZ", "full_name" "Rear Hazard Avoidance Camera"}]} {"id" 7, "name" "Spirit", "landing_date" "2004-01-04", "max_sol" 2208, "max_date" "2010-03-21", "total_photos" 124550, "cameras" [{"name" "FHAZ", "full_name" "Front Hazard Avoidance Camera"} {"name" "NAVCAM", "full_name" "Navigation Camera"} {"name" "PANCAM", "full_name" "Panoramic Camera"} {"name" "MINITES", "full_name" "Miniature Thermal Emission Spectrometer (Mini-TES)"} {"name" "ENTRY", "full_name" "Entry, Descent, and Landing Camera"} {"name" "RHAZ", "full_name" "Rear Hazard Avoidance Camera"}]}]
-    ))
+(comment)
+(defn get-info
+  [rover]
+  (get
+   {:curiosity {"id" 5, "name" "Curiosity", "landing_date" "2012-08-06", "max_sol" 1315, "max_date" "2016-04-18", "total_photos" 250165, "cameras" [{"name" "FHAZ", "full_name" "Front Hazard Avoidance Camera"} {"name" "NAVCAM", "full_name" "Navigation Camera"} {"name" "MAST", "full_name" "Mast Camera"} {"name" "CHEMCAM", "full_name" "Chemistry and Camera Complex"} {"name" "MAHLI", "full_name" "Mars Hand Lens Imager"} {"name" "MARDI", "full_name" "Mars Descent Imager"} {"name" "RHAZ", "full_name" "Rear Hazard Avoidance Camera"}]}
+    :opportunity {"id" 6, "name" "Opportunity", "landing_date" "2004-01-25", "max_sol" 4348, "max_date" "2016-04-18", "total_photos" 179636, "cameras" [{"name" "FHAZ", "full_name" "Front Hazard Avoidance Camera"} {"name" "NAVCAM", "full_name" "Navigation Camera"} {"name" "PANCAM", "full_name" "Panoramic Camera"} {"name" "MINITES", "full_name" "Miniature Thermal Emission Spectrometer (Mini-TES)"} {"name" "ENTRY", "full_name" "Entry, Descent, and Landing Camera"} {"name" "RHAZ", "full_name" "Rear Hazard Avoidance Camera"}]}
+    :spirit {"id" 7, "name" "Spirit", "landing_date" "2004-01-04", "max_sol" 2208, "max_date" "2010-03-21", "total_photos" 124550, "cameras" [{"name" "FHAZ", "full_name" "Front Hazard Avoidance Camera"} {"name" "NAVCAM", "full_name" "Navigation Camera"} {"name" "PANCAM", "full_name" "Panoramic Camera"} {"name" "MINITES", "full_name" "Miniature Thermal Emission Spectrometer (Mini-TES)"} {"name" "ENTRY", "full_name" "Entry, Descent, and Landing Camera"} {"name" "RHAZ", "full_name" "Rear Hazard Avoidance Camera"}]}}
+   rover))

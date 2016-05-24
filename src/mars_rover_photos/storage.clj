@@ -2,14 +2,13 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as string]))
 
-(defn- img-name
-  "Returns image name from url."
+(defn- src->name
+  "Returns image name from source url."
   [url]
-  (last
-   (string/split url  #"/")))
+  (last (string/split url  #"/")))
 
 (defn- download-image
-  "Downloads image at src to target."
+  "Downloads image at src to target, returning target if download is successful."
   [src target]
   (let [file (io/file target)]
     (try
@@ -31,18 +30,14 @@
   (.exists (io/as-file img)))
 
 (defn- src->path
-  [path src]
-  (prepend-target path (img-name src)))
+  [src path]
+  (prepend-target path (src->name src)))
 
 (defn download-images
   "Downloads images to target. First it filters out all images already downloaded.
-  Returns a list of images succcesfully downloaded.
-
-  imgs-src - [collection] a collection of img srcs
-  target   - [string] path to a folder where images will be downloaded to
-  "
+  Returns a list of images succcesfully downloaded."
   [imgs-src target]
-  (let [src-target-path #(src->path target %)
+  (let [src-target-path #(src->path % target)
         [existing to-download] ((juxt filter remove) #(-> % src-target-path image-exists?) imgs-src)
         downloaded (map #(download-image %1 %2)
                         to-download
