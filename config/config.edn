@@ -1,0 +1,9 @@
+{:database {:protocol "postgresql"
+            :host "localhost"
+            :port "5432"
+            :database "mars"}
+ :www {:port 8080}
+ :resources {:raw "images/"
+             :pub "public/"}
+ :api {:key "DEMO_KEY"
+       :base-url "https://api.nasa.gov/mars-photos/api/v1/rovers/"}}

@@ -1,13 +1,20 @@
 (ns mars-rover-photos.gif
-  (:require [clojure.java.io :as io]
-            [gifclj.core :as gif]))
+  (:require
+      [mars-rover-photos.conf :refer [config]]
+      [gifclj.core :as gif]
+      [clojure.java.io :as io]))
 
 (defn generate
-  "Generates an animated gif image from images and saves it under name."
-  [gif-name images & {:keys [delay loops lastdelay]
-                      :or {delay 100 loops 0 lastdelay 100}}]
-  (gif/write-gif gif-name
-                 (gif/imgs-from-files images)
-                 :delay delay
-                 :loops loops
-                 :lastdelay lastdelay))
+  [images & {:keys [delay loops lastdelay]
+             :or {delay 100 loops 0 lastdelay 100}}]
+
+  (let [gif-path (str (get-in config [:resources :pub])
+                      (hash (sort images))
+                      ".gif")]
+    (if (.exists (io/as-file gif-path))
+      gif-path
+      (gif/write-gif gif-path
+                     (gif/imgs-from-files images)
+                     :delay delay
+                     :loops loops
+                     :lastdelay lastdelay))))

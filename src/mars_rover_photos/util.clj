@@ -9,7 +9,7 @@
        nil)))
 
 (defn io
-  "Delays the execution of the impure function by wrapping it in a function."
+  "Delays the execution of the impure function by wrapping it in another function."
   [impure-fn]
   (fn [] impure-fn))
 
